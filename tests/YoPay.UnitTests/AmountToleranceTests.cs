@@ -1,6 +1,6 @@
 using YoPay.Domain.Invoicing;
 
-namespace YoPay.Domain.Tests;
+namespace YoPay.UnitTests;
 
 public class AmountToleranceTests
 {

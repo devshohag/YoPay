@@ -8,6 +8,10 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The golden corpus travels with the test binary; the parser tests replay it. -->
+    <None Include="..\fixtures\bkash\corpus.tsv" Link="fixtures/corpus.tsv" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\YoPay.Domain\YoPay.Domain.csproj" />
     <ProjectReference Include="..\..\src\YoPay.Application\YoPay.Application.csproj" />
   </ItemGroup>
