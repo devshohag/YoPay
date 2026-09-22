@@ -14,6 +14,7 @@ public class YoPayDbContext(DbContextOptions<YoPayDbContext> options) : DbContex
     public DbSet<Device> Devices => Set<Device>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<PaymentSession> PaymentSessions => Set<PaymentSession>();
+    public DbSet<PaymentClaim> PaymentClaims => Set<PaymentClaim>();
     public DbSet<RawEvent> RawEvents => Set<RawEvent>();
     public DbSet<ParsedTransaction> ParsedTransactions => Set<ParsedTransaction>();
     public DbSet<ParserTemplate> ParserTemplates => Set<ParserTemplate>();
