@@ -23,3 +23,5 @@ appsettings.Local.json
 # Tooling
 .idea/
 .DS_Store
+
+local.ps1

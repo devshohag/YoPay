@@ -22,6 +22,14 @@ public interface IInvoiceStore
     Task<IReadOnlyCollection<decimal>> OpenSessionAmountsAsync(
         Guid walletId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Everything the hosted checkout page needs, by invoice id alone - the customer is
+    /// not a merchant and has no credentials, so this one lookup is deliberately not
+    /// scoped to a merchant. It returns a projection rather than the entity so nothing
+    /// the customer must not see can leak onto the page by accident.
+    /// </summary>
+    Task<CheckoutView?> FindCheckoutAsync(Guid invoiceId, CancellationToken ct = default);
+
     /// <summary>Saves the invoice and its first session together, or neither.</summary>
     Task SaveAsync(Invoice invoice, PaymentSession session, CancellationToken ct = default);
 }

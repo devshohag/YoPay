@@ -46,6 +46,29 @@ public sealed class EfInvoiceStore(YoPayDbContext db) : IInvoiceStore
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
+    public Task<CheckoutView?> FindCheckoutAsync(Guid invoiceId, CancellationToken ct = default) =>
+        db.Invoices
+            .AsNoTracking()
+            .Where(i => i.Id == invoiceId)
+            .Join(db.Wallets, i => i.WalletId, w => w.Id, (i, w) => new { i, w })
+            .Join(db.Merchants, x => x.i.MerchantId, m => m.Id, (x, m) => new CheckoutView
+            {
+                InvoiceId = x.i.Id,
+                MerchantName = m.Name,
+                OrderRef = x.i.OrderRef,
+                Amount = x.i.Amount,
+                ChargedAmount = x.i.ChargedAmount,
+                Currency = x.i.Currency,
+                Method = x.w.Method,
+                PayToNumber = x.w.Number,
+                AccountType = x.w.AccountType,
+                Status = x.i.Status,
+                ExpiresAt = x.i.ExpiresAt,
+                GraceUntil = x.i.GraceUntil,
+                RedirectUrl = x.i.RedirectUrl,
+            })
+            .FirstOrDefaultAsync(ct);
+
     /// <summary>
     /// One transaction. An invoice without its session is an invoice nothing can ever
     /// match, and a session without its invoice violates the foreign key - so neither is

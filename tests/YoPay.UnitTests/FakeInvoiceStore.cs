@@ -11,6 +11,10 @@ internal sealed class FakeInvoiceStore : IInvoiceStore
     public List<Wallet> Wallets { get; } = [];
     public List<decimal> OpenAmounts { get; } = [];
     public int SaveCalls { get; private set; }
+    public CheckoutView? Checkout { get; set; }
+
+    public Task<CheckoutView?> FindCheckoutAsync(Guid invoiceId, CancellationToken ct = default) =>
+        Task.FromResult(Checkout);
 
     public Task<Invoice?> FindByOrderRefAsync(
         Guid merchantId, string orderRef, CancellationToken ct = default) =>

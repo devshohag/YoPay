@@ -1,0 +1,134 @@
+@page "/pay/{invoiceId:guid}"
+@model PayModel
+@{
+    Layout = null;
+    var invoice = Model.Invoice!;
+    var methodName = invoice.Method.ToString();
+}
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>@invoice.MerchantName — পেমেন্ট</title>
+    <style>
+        :root { --ink:#0b1a2b; --muted:#5b6876; --line:#e2e8f0; --brand:#0d9488; --bad:#b91c1c; }
+        * { box-sizing:border-box; }
+        body { margin:0; padding:16px; background:#f6f8fa; color:var(--ink);
+               font-family:system-ui,-apple-system,"Noto Sans Bengali",sans-serif; line-height:1.55; }
+        .card { max-width:420px; margin:0 auto; background:#fff; border:1px solid var(--line);
+                border-radius:12px; padding:20px; }
+        .merchant { font-size:13px; color:var(--muted); }
+        .amount { font-size:34px; font-weight:700; margin:4px 0 2px; }
+        .billed { font-size:12px; color:var(--muted); margin-bottom:14px; }
+        .number { font-size:22px; font-weight:700; letter-spacing:.06em; }
+        .box { background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; padding:12px; margin:14px 0; }
+        .row { display:flex; justify-content:space-between; gap:12px; font-size:13px; padding:5px 0; }
+        .row span:first-child { color:var(--muted); }
+        ol { margin:10px 0 0; padding-left:20px; font-size:14px; }
+        li { margin-bottom:6px; }
+        input { width:100%; padding:12px; font-size:16px; border:1px solid var(--line);
+                border-radius:8px; text-transform:uppercase; }
+        button { width:100%; padding:13px; font-size:16px; font-weight:600; color:#fff;
+                 background:var(--brand); border:0; border-radius:8px; margin-top:10px; }
+        .msg { padding:11px; border-radius:8px; font-size:13px; margin:12px 0; }
+        .msg.ok { background:#ecfdf5; color:#065f46; }
+        .msg.bad { background:#fef2f2; color:var(--bad); }
+        .timer { font-size:13px; color:var(--muted); text-align:center; margin-top:14px; }
+        .paid { text-align:center; padding:24px 0; }
+        .paid .tick { font-size:44px; color:var(--brand); }
+        .foot { text-align:center; font-size:11px; color:var(--muted); margin-top:16px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    @if (invoice.IsSettled)
+    {
+        <div class="paid">
+            <div class="tick">&#10003;</div>
+            <h2>পেমেন্ট সম্পন্ন</h2>
+            <p class="merchant">Payment confirmed — @invoice.MerchantName</p>
+            <p class="merchant">Order @invoice.OrderRef</p>
+        </div>
+        @if (!string.IsNullOrEmpty(invoice.RedirectUrl))
+        {
+            <a href="@invoice.RedirectUrl"><button type="button">ফিরে যান / Continue</button></a>
+        }
+    }
+    else
+    {
+        <div class="merchant">@invoice.MerchantName &middot; Order @invoice.OrderRef</div>
+
+        @* The charged figure is the only amount shown in large type. When the unique
+           amount strategy salts it, the customer must send this, not what was billed. *@
+        <div class="amount">৳ @invoice.ChargedAmount.ToString("N2")</div>
+        @if (invoice.ChargedAmount != invoice.Amount)
+        {
+            <div class="billed">
+                অর্ডারের মূল্য ৳@invoice.Amount.ToString("N2") — শনাক্ত করার জন্য ঠিক
+                <strong>৳@invoice.ChargedAmount.ToString("N2")</strong> পাঠান।
+            </div>
+        }
+
+        <div class="box">
+            <div class="row"><span>@methodName নম্বর</span></div>
+            <div class="number">@invoice.PayToNumber</div>
+            <div class="row"><span>ধরন / Type</span><span>Send Money</span></div>
+        </div>
+
+        <ol>
+            <li>@methodName অ্যাপে <strong>Send Money</strong> দিন</li>
+            <li>উপরের নম্বরে ঠিক <strong>৳@invoice.ChargedAmount.ToString("N2")</strong> পাঠান</li>
+            <li>SMS-এ আসা <strong>TrxID</strong> নিচে লিখুন</li>
+        </ol>
+
+        @if (Model.Message is not null)
+        {
+            <div class="msg @(Model.IsError ? "bad" : "ok")">@Model.Message</div>
+        }
+
+        @if (!Model.Submitted)
+        {
+            <form method="post">
+                @Html.AntiForgeryToken()
+                <input name="TrxId" value="@Model.TrxId" placeholder="TrxID, যেমন DHD6EYO3HO"
+                       autocomplete="off" autocapitalize="characters" spellcheck="false"
+                       inputmode="latin" maxlength="500" required />
+                <button type="submit">পেমেন্ট নিশ্চিত করুন / Confirm</button>
+            </form>
+        }
+
+        <div class="timer" id="timer" data-expires="@invoice.ExpiresAt.ToUnixTimeSeconds()"></div>
+    }
+
+    <div class="foot">YoPay &middot; আপনার PIN বা OTP কখনো এখানে দেবেন না</div>
+</div>
+
+<script>
+    // Countdown, and a poll so a confirmed payment updates the page without the customer
+    // wondering whether to refresh. Both are plain script on purpose: this page has to
+    // work on a slow connection on an old handset.
+    (function () {
+        var el = document.getElementById('timer');
+        if (el) {
+            var expires = parseInt(el.getAttribute('data-expires'), 10) * 1000;
+            setInterval(function () {
+                var left = Math.max(0, Math.floor((expires - Date.now()) / 1000));
+                var m = Math.floor(left / 60), s = left % 60;
+                el.textContent = left > 0
+                    ? 'বাকি সময় ' + m + ':' + (s < 10 ? '0' : '') + s
+                    : 'সময় শেষ — টাকা পাঠিয়ে থাকলে TrxID দিন';
+            }, 1000);
+        }
+
+        setInterval(function () {
+            fetch(location.pathname + '/status')
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) { if (d && d.settled) { location.reload(); } })
+                .catch(function () { });
+        }, 5000);
+    })();
+</script>
+</body>
+</html>

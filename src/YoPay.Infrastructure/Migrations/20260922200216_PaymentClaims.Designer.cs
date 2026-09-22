@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using YoPay.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using YoPay.Infrastructure.Persistence;
 namespace YoPay.Infrastructure.Migrations
 {
     [DbContext(typeof(YoPayDbContext))]
-    partial class YoPayDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260922200216_PaymentClaims")]
+    partial class PaymentClaims
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
