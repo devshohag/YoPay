@@ -36,6 +36,11 @@ public sealed record InvoiceWindow
     public bool Accepts(Invoice invoice, DateTimeOffset eventTime)
     {
         ArgumentNullException.ThrowIfNull(invoice);
-        return eventTime >= invoice.CreatedAt && eventTime <= invoice.GraceUntil;
+
+        var limit = invoice.GraceUntil == default
+            ? invoice.CreatedAt + PayWindow + Grace
+            : invoice.GraceUntil;
+
+        return eventTime >= invoice.CreatedAt && eventTime <= limit;
     }
 }

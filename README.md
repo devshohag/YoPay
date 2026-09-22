@@ -20,7 +20,9 @@ persistence. See `docs/` in the planning PDFs for the full phase plan.
     src/YoPay.Checkout        hosted payment page                     (filled in T5)
     src/YoPay.Worker          parser, matcher, webhook dispatcher     (filled in T7-T9)
     src/YoPay.Scheduler       session expiry, retries, billing        (filled in T12)
-    tests/YoPay.Domain.Tests  state machine, match rules, window and heartbeat tests
+    src/YoPay.Application     ... plus Parsing: bKash templates and the message parser
+    tests/YoPay.UnitTests     state machine, match rules, window, heartbeat, parser
+    tests/fixtures/bkash      golden corpus of real bKash messages
     docs/                     T0A Android capture spike brief
 
 ## How work lands

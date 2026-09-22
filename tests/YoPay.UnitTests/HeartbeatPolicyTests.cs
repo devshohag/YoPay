@@ -1,6 +1,6 @@
 using YoPay.Application.Devices;
 
-namespace YoPay.Domain.Tests;
+namespace YoPay.UnitTests;
 
 public class HeartbeatPolicyTests
 {

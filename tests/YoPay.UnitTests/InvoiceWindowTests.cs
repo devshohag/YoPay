@@ -1,7 +1,7 @@
 using YoPay.Application.Invoicing;
 using YoPay.Domain.Entities;
 
-namespace YoPay.Domain.Tests;
+namespace YoPay.UnitTests;
 
 public class InvoiceWindowTests
 {

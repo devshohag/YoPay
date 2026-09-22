@@ -10,6 +10,12 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
 
+    <!-- Pulled in transitively, and audited as vulnerable at 9.0.0. Central transitive
+         pinning is enabled above, so naming the package here forces the patched version
+         everywhere without adding a direct reference anyone has to remember to keep.
+         10.0.10 is the first release clear of the eight advisories NuGet audit raises
+         against this package. Delete the line once the package dragging it in ships a
+         fixed dependency of its own. -->
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
 
     <!-- Testing -->

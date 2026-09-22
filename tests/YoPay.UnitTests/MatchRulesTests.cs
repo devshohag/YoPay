@@ -3,7 +3,7 @@ using YoPay.Domain.Entities;
 using YoPay.Domain.Enums;
 using YoPay.Domain.Invoicing;
 
-namespace YoPay.Domain.Tests;
+namespace YoPay.UnitTests;
 
 public class MatchRulesTests
 {
