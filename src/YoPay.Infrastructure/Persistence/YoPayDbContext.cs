@@ -12,6 +12,7 @@ public class YoPayDbContext(DbContextOptions<YoPayDbContext> options) : DbContex
     public DbSet<RequestNonce> RequestNonces => Set<RequestNonce>();
     public DbSet<Wallet> Wallets => Set<Wallet>();
     public DbSet<Device> Devices => Set<Device>();
+    public DbSet<DevicePairingToken> DevicePairingTokens => Set<DevicePairingToken>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<PaymentSession> PaymentSessions => Set<PaymentSession>();
     public DbSet<PaymentClaim> PaymentClaims => Set<PaymentClaim>();
