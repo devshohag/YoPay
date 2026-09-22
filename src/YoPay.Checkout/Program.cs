@@ -4,6 +4,7 @@ using YoPay.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddYoPayPersistence(builder.Configuration);
+builder.Services.AddYoPaySecurity(builder.Configuration);
 
 var app = builder.Build();
 
