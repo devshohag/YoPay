@@ -1,0 +1,25 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Node
+node_modules/
+.next/
+out/
+
+# Secrets and generated material - never commit these
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+appsettings.Development.json
+appsettings.Local.json
+
+# Tooling
+.idea/
+.DS_Store
