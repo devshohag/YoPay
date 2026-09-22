@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using YoPay.Application.Abstractions;
+using YoPay.Application.Invoicing;
 using YoPay.Application.Security;
 using YoPay.Infrastructure.Persistence;
 using YoPay.Infrastructure.Persistence.Interceptors;
@@ -38,6 +39,8 @@ public static class DependencyInjection
             options.AddInterceptors(provider.GetRequiredService<TimestampInterceptor>());
         });
 
+        services.AddScoped<IInvoiceStore, EfInvoiceStore>();
+
         return services;
     }
 
@@ -63,6 +66,7 @@ public static class DependencyInjection
         services.AddSingleton<IClock, SystemClock>();
 
         services.AddScoped<INonceStore, EfNonceStore>();
+        services.AddScoped<ICredentialLookup, EfCredentialLookup>();
         services.AddScoped<SignatureVerifier>();
 
         services.AddHttpClient(OutboundHttpClient, client =>
