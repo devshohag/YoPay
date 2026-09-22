@@ -16,7 +16,7 @@ namespace YoPay.UnitTests;
 /// </summary>
 public class BkashParserTests
 {
-    private static readonly IMessageParser Parser = MessageParser.ForBkash();
+    private static readonly MessageParser Parser = MessageParser.ForBkash();
 
     public static TheoryData<MessageKind, string> Corpus()
     {
