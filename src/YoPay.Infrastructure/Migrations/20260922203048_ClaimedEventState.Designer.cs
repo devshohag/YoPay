@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using YoPay.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using YoPay.Infrastructure.Persistence;
 namespace YoPay.Infrastructure.Migrations
 {
     [DbContext(typeof(YoPayDbContext))]
-    partial class YoPayDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260922203048_ClaimedEventState")]
+    partial class ClaimedEventState
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -939,11 +942,6 @@ namespace YoPay.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("DeviceReceivedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("device_received_at");
-
-                    b.Property<string>("FailureReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("failure_reason");
 
                     b.Property<Guid>("MerchantId")
                         .HasColumnType("uuid")

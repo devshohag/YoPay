@@ -56,7 +56,16 @@ public static class BkashFieldReader
             return null;
         }
 
-        return new DateTimeOffset(local, DhakaOffset);
+        // Read as Dhaka time, handed on as UTC. Both describe the same instant - the
+        // difference is only which offset the value carries - and everything downstream
+        // wants the instant, not the wall clock bKash printed.
+        //
+        // The offset has to go before the value reaches the database. Postgres stores
+        // timestamptz as an instant in UTC and keeps no offset, so Npgsql refuses any
+        // DateTimeOffset whose offset is not zero rather than silently discarding it:
+        // "Cannot write DateTimeOffset with Offset=06:00:00 ... only offset 0 (UTC) is
+        // supported". Normalising here means no caller has to remember that.
+        return new DateTimeOffset(local, DhakaOffset).ToUniversalTime();
     }
 
     /// <summary>Normalised for hashing and comparison; provider ids are upper case.</summary>

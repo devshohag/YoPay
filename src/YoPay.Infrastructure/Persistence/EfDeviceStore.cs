@@ -39,6 +39,21 @@ public sealed class EfDeviceStore(YoPayDbContext db) : IDeviceStore
         ArgumentNullException.ThrowIfNull(token);
         ArgumentNullException.ThrowIfNull(device);
 
+        // The connection retries on a transient failure, and a retrying execution strategy
+        // refuses a transaction opened behind its back. Hand it the whole unit instead.
+        var strategy = db.Database.CreateExecutionStrategy();
+
+        return await strategy
+            .ExecuteAsync(() => PairInTransactionAsync(token, device, ct))
+            .ConfigureAwait(false);
+    }
+
+    private async Task<Device?> PairInTransactionAsync(
+        DevicePairingToken token, Device device, CancellationToken ct)
+    {
+        // A retry starts here again, so nothing from the failed attempt may survive.
+        db.ChangeTracker.Clear();
+
         await using var transaction = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
 
         var burned = await db.DevicePairingTokens

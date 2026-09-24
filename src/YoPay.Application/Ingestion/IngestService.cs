@@ -50,10 +50,16 @@ public sealed class IngestService(IRawEventStore events, IClock clock)
                 continue;
             }
 
+            // A handset in Dhaka sends its timestamp with a +06:00 offset. The same
+            // instant written two ways must not become two different messages, and the
+            // database column stores an instant with no offset anyway, so the offset is
+            // dropped once, here, before it reaches either the hash or the row.
+            var receivedAt = item.ReceivedAt.ToUniversalTime();
+
             // Recomputed here, never taken from the device: a client-supplied hash could
             // make two different messages collide, or one message look like ten.
             var hash = DedupeHash.Compute(
-                device.DeviceId, item.SenderId, item.Body, item.ReceivedAt);
+                device.DeviceId, item.SenderId, item.Body, receivedAt);
 
             var rawEvent = new RawEvent
             {
@@ -62,7 +68,7 @@ public sealed class IngestService(IRawEventStore events, IClock clock)
                 Source = item.Source,
                 SenderId = item.SenderId.Trim(),
                 Body = item.Body.Trim(),
-                DeviceReceivedAt = item.ReceivedAt,
+                DeviceReceivedAt = receivedAt,
                 ServerReceivedAt = now,
                 DedupeHash = hash,
                 State = RawEventState.Received,

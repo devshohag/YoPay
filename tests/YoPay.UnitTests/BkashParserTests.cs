@@ -138,8 +138,42 @@ public class BkashParserTests
             "You have received Tk 200.00 from 01910126335. Fee Tk 0.00. " +
             "Balance Tk 1,881.86. TrxID DHD6EYO3HO at 13/08/2026 16:02");
 
-        Assert.Equal(TimeSpan.FromHours(6), result.OccurredAt!.Value.Offset);
-        Assert.Equal(new DateTime(2026, 8, 13, 16, 2, 0), result.OccurredAt.Value.DateTime);
+        // 16:02 in Dhaka is 10:02 UTC. The assertion is about the instant, because the
+        // instant is what the matcher compares and what the database stores.
+        Assert.Equal(
+            new DateTimeOffset(2026, 8, 13, 10, 2, 0, TimeSpan.Zero),
+            result.OccurredAt);
+
+        Assert.Equal(16, result.OccurredAt!.Value.ToOffset(TimeSpan.FromHours(6)).Hour);
+    }
+
+    [Fact]
+    public void Timestamps_leave_the_parser_with_a_zero_offset()
+    {
+        // Not a style preference. Npgsql refuses to write a DateTimeOffset with a non-zero
+        // offset to a timestamptz column - "only offset 0 (UTC) is supported" - and it
+        // throws that from inside SaveChanges, wrapped in a DbUpdateException whose own
+        // message says nothing. Every payment failed on this, and the dashboard showed it
+        // as a message nobody could parse, which it was not.
+        //
+        // An earlier version of the test above asserted Offset == +06:00: it checked how
+        // the value was written rather than which instant it named, and that is precisely
+        // why it let this through.
+        var result = Parser.Parse(
+            "bKash",
+            "You have received Tk 200.00 from 01910126335. Fee Tk 0.00. " +
+            "Balance Tk 1,881.86. TrxID DHD6EYO3HO at 13/08/2026 16:02");
+
+        Assert.Equal(TimeSpan.Zero, result.OccurredAt!.Value.Offset);
+    }
+
+    [Theory]
+    [InlineData("01/01/2026 00:00")]
+    [InlineData("24/09/2026 22:27")]
+    [InlineData("31/12/2026 23:59")]
+    public void Every_timestamp_the_reader_produces_is_UTC(string stamp)
+    {
+        Assert.Equal(TimeSpan.Zero, BkashFieldReader.ReadTimestamp(stamp)!.Value.Offset);
     }
 
     [Fact]

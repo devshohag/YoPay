@@ -32,5 +32,16 @@ public class RawEvent : MerchantEntity
 
     public RawEventState State { get; set; } = RawEventState.Received;
 
+    /// <summary>
+    /// Why this message is not Parsed, in words, for the person looking at the ops queue.
+    ///
+    /// A state on its own says a message failed but not what to do about it: "no template
+    /// matched" means the operator changed its wording and a template needs writing, while
+    /// a database error means the message was fine and the system was not. Those are two
+    /// different jobs for two different people, and a row that shows only Unparseable
+    /// makes someone go and read a log to tell them apart.
+    /// </summary>
+    public string? FailureReason { get; set; }
+
     public Device Device { get; set; } = null!;
 }

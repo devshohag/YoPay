@@ -4,8 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using YoPay.Application.Abstractions;
 using YoPay.Application.Devices;
 using YoPay.Application.Ingestion;
+using YoPay.Application.Matching;
 using YoPay.Application.Invoicing;
 using YoPay.Application.Security;
+using YoPay.Infrastructure.Matching;
 using YoPay.Infrastructure.Persistence;
 using YoPay.Infrastructure.Persistence.Interceptors;
 using YoPay.Infrastructure.Security;
@@ -45,6 +47,8 @@ public static class DependencyInjection
         services.AddScoped<IClaimStore, EfClaimStore>();
         services.AddScoped<IDeviceStore, EfDeviceStore>();
         services.AddScoped<IRawEventStore, EfRawEventStore>();
+        services.AddScoped<IPipelineStore, EfPipelineStore>();
+        services.AddScoped<IPaymentMatcher, EfPaymentMatcher>();
 
         return services;
     }

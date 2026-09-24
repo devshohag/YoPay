@@ -70,6 +70,13 @@ public enum RawEventState
     Unparseable = 2,
     /// <summary>Parsed and deliberately ignored - cash out, recharge, promo, OTP.</summary>
     Ignored = 3,
+
+    /// <summary>
+    /// Taken by a worker and not yet finished. A crash leaves rows here, so the pipeline
+    /// releases anything claimed more than a few minutes ago before each run: a message
+    /// that stalls visibly and reappears beats one that is silently held forever.
+    /// </summary>
+    Claimed = 4,
 }
 
 public enum DevicePermissionState

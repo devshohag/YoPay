@@ -1,0 +1,200 @@
+@page "/dashboard"
+@model DashboardModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    @* Reloads itself only while a message is actually in flight, and stops on its own.
+       Safe because every POST answers with a redirect now - a reload is a plain GET. *@
+    @if (Model.Working)
+    {
+        <meta http-equiv="refresh" content="3" />
+    }
+    <title>YoPay dev</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #f6f8fa;
+               color: #16202e; font-size: 14px; }
+        .wrap { max-width: 1000px; margin: 0 auto; }
+        h1 { font-size: 18px; margin: 0 0 4px; }
+        .dev { font-size: 12px; color: #b45309; background: #fffbeb; border: 1px solid #fde68a;
+               padding: 6px 10px; border-radius: 6px; margin-bottom: 16px; }
+        .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+                padding: 14px 16px; margin-bottom: 14px; }
+        h2 { font-size: 14px; margin: 0 0 10px; color: #0f766e; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; color: #64748b; font-weight: 600; padding: 4px 8px 6px;
+             border-bottom: 1px solid #e2e8f0; }
+        td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        .mono { font-family: ui-monospace, monospace; font-size: 12px; }
+        .pill { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; }
+        .Paid, .Matched, .Parsed, .Healthy { background: #d1fae5; color: #065f46; }
+        .AwaitingPayment, .Received, .Claimed { background: #e0f2fe; color: #075985; }
+        .Partial, .PendingReview, .Unparseable { background: #fef3c7; color: #92400e; }
+        .Expired, .Cancelled, .Ignored { background: #f1f5f9; color: #475569; }
+        input, button { font-size: 14px; padding: 7px 10px; border: 1px solid #cbd5e1;
+                        border-radius: 6px; }
+        button { background: #0d9488; color: #fff; border: 0; font-weight: 600; cursor: pointer; }
+        .notice { background: #ecfdf5; border: 1px solid #a7f3d0; padding: 9px 12px;
+                  border-radius: 6px; margin-bottom: 12px; font-size: 13px; }
+        .code { font-family: ui-monospace, monospace; font-size: 20px; letter-spacing: .1em;
+                font-weight: 700; color: #0f766e; }
+        .muted { color: #94a3b8; }
+        .closed { color: #b91c1c; font-weight: 600; }
+        .why { margin-top: 4px; color: #b45309; font-size: 12px; white-space: normal;
+               font-family: system-ui, sans-serif; }
+        form { display: inline; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>YoPay</h1>
+    <div class="dev">
+        Development console. No authentication, reads and writes every merchant &mdash;
+        never mapped outside Development.
+    </div>
+
+    @if (Model.Notice is not null)
+    {
+        <div class="notice">
+            @Model.Notice
+            @if (Model.CheckoutUrl is not null)
+            {
+                <div style="margin-top:6px"><a href="@Model.CheckoutUrl" target="_blank">@Model.CheckoutUrl</a></div>
+            }
+            @if (Model.IssuedKeyId is not null)
+            {
+                <div class="mono" style="margin-top:6px">
+                    KeyId&nbsp; @Model.IssuedKeyId<br />
+                    Secret&nbsp; @Model.IssuedSecret
+                </div>
+            }
+            @if (Model.PairingCode is not null)
+            {
+                <div class="code" style="margin-top:6px">@Model.PairingCode</div>
+                <div class="mono muted">dotnet run --project tools/YoPay.DeviceSim -- pair @Model.PairingCode</div>
+            }
+        </div>
+    }
+
+    <div class="card">
+        <h2>New invoice</h2>
+        <form method="post" asp-page-handler="CreateInvoice">
+            @Html.AntiForgeryToken()
+            <input name="Amount" value="@Model.Amount" style="width:110px" placeholder="Amount" />
+            <input name="OrderRef" value="" style="width:200px" placeholder="Order ref (optional)" />
+            <button type="submit">Create</button>
+        </form>
+        <form method="post" asp-page-handler="PairingCode" style="margin-left:8px">
+            @Html.AntiForgeryToken()
+            <button type="submit" style="background:#1e293b">Pairing code</button>
+        </form>
+        @if (Model.Merchants.Count == 0)
+        {
+            <form method="post" asp-page-handler="Seed" style="margin-left:8px">
+                @Html.AntiForgeryToken()
+                <button type="submit" style="background:#b45309">Seed demo merchant</button>
+            </form>
+        }
+        else
+        {
+            <form method="post" asp-page-handler="IssueKey" style="margin-left:8px">
+                @Html.AntiForgeryToken()
+                <button type="submit" style="background:#475569">Issue API key</button>
+            </form>
+        }
+    </div>
+
+    <div class="card">
+        <h2>Invoices</h2>
+        <table>
+            <tr><th>Order</th><th>Billed</th><th>Charged</th><th>Status</th><th>Created</th><th>Window</th><th>Actions</th></tr>
+            @foreach (var i in Model.Invoices)
+            {
+                <tr>
+                    <td>@i.OrderRef</td>
+                    <td>@i.Amount.ToString("N2")</td>
+                    <td>@i.ChargedAmount.ToString("N2")</td>
+                    <td><span class="pill @i.Status">@i.Status</span></td>
+                    <td class="muted">@i.CreatedAt.ToLocalTime().ToString("HH:mm:ss")</td>
+                    <td class="@(i.WindowClosed ? "closed" : "muted")">
+                        @(i.WindowClosed ? "closed" : "until " + i.GraceUntil.ToLocalTime().ToString("HH:mm"))
+                    </td>
+                    <td class="mono">
+                        <a href="/pay-link/@i.Id" target="_blank">open</a>
+                        @* No button for an invoice that cannot accept a payment any more.
+                           Offering an action whose only possible result is an unmatched
+                           payment is worse than offering nothing. *@
+                        @if (i.Status == InvoiceStatus.AwaitingPayment && !i.WindowClosed)
+                        {
+                            <form method="post" asp-page-handler="Simulate" style="margin-left:6px">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="invoiceId" value="@i.Id" />
+                                <button type="submit" style="background:#7c3aed;padding:3px 8px;font-size:12px">pay it</button>
+                            </form>
+                        }
+                        else if (i.Status == InvoiceStatus.AwaitingPayment)
+                        {
+                            <span class="muted" style="margin-left:6px">too late</span>
+                        }
+                    </td>
+                </tr>
+            }
+            @if (Model.Invoices.Count == 0)
+            {
+                <tr><td colspan="7" class="muted">none yet</td></tr>
+            }
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Devices</h2>
+        <table>
+            <tr><th>Model</th><th>Version</th><th>Last heartbeat</th><th>Permission</th><th>Battery</th></tr>
+            @foreach (var d in Model.Devices)
+            {
+                <tr>
+                    <td>@(d.Model ?? "—")</td>
+                    <td class="mono">@(d.AppVersion ?? "—")</td>
+                    <td class="muted">@(d.LastHeartbeatAt?.ToLocalTime().ToString("HH:mm:ss") ?? "never")</td>
+                    <td><span class="pill @d.PermissionState">@d.PermissionState</span></td>
+                    <td>@(d.BatteryPercent?.ToString() ?? "—")</td>
+                </tr>
+            }
+            @if (Model.Devices.Count == 0)
+            {
+                <tr><td colspan="5" class="muted">no device paired</td></tr>
+            }
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Incoming messages @if (Model.Working) { <span class="muted" style="font-weight:400">— worker is on it, refreshing…</span> }</h2>
+        <table>
+            <tr><th style="width:90px">State</th><th>Message</th><th style="width:70px">Seen</th></tr>
+            @foreach (var e in Model.Events)
+            {
+                <tr>
+                    <td><span class="pill @e.State">@e.State</span></td>
+                    <td class="mono">
+                        @(e.Body.Length > 110 ? e.Body[..110] + "…" : e.Body)
+                        @if (!string.IsNullOrWhiteSpace(e.FailureReason))
+                        {
+                            <div class="why">@e.FailureReason</div>
+                        }
+                    </td>
+                    <td class="muted">@e.DeviceReceivedAt.ToLocalTime().ToString("HH:mm")</td>
+                </tr>
+            }
+            @if (Model.Events.Count == 0)
+            {
+                <tr><td colspan="3" class="muted">nothing ingested yet</td></tr>
+            }
+        </table>
+    </div>
+</div>
+</body>
+</html>

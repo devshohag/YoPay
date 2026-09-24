@@ -30,6 +30,7 @@ public sealed record MatchDecision
     public required MatchOutcome Outcome { get; init; }
     public Guid? InvoiceId { get; init; }
     public Guid? PaymentSessionId { get; init; }
+    public Guid? ClaimId { get; init; }
     public MatchStrategy? Strategy { get; init; }
     public string? Reason { get; init; }
 

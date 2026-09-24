@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Business rules and ports. References the domain and the wire contracts and
-       nothing else: no EF, no ASP.NET, no HttpClient. If a package ever needs adding
-       here, the thing being added probably belongs in Infrastructure. -->
+  <!-- Business rules and ports. References the domain and the wire contracts and nothing
+       else - not even a logging abstraction. Keeping this project free of packages is not
+       purity for its own sake: it is the one project that compiles and runs anywhere, so
+       every rule in it can be exercised without a database, a host or a restore. -->
   <ItemGroup>
     <ProjectReference Include="..\YoPay.Domain\YoPay.Domain.csproj" />
     <ProjectReference Include="..\YoPay.Contracts\YoPay.Contracts.csproj" />

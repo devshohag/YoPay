@@ -14,6 +14,7 @@ builder.Services.AddYoPaySecurity(builder.Configuration);
 
 builder.Services.AddScoped<MerchantContext>();
 builder.Services.AddScoped<CreateInvoiceService>();
+builder.Services.AddRazorPages();
 
 // Partitioned by API key, falling back to the remote address for requests that never got
 // as far as authentication. Keyed by IP alone, one noisy merchant behind a shared NAT
@@ -41,6 +42,21 @@ app.UseMiddleware<SignedRequestMiddleware>();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "YoPay.Api" }));
 app.MapPaymentEndpoints(app.Configuration);
+
+// The development console, and the link the dashboard uses to open a checkout page.
+// Mapped only in Development: it has no authentication and reads every merchant's data,
+// so the day it is reachable from anywhere but a laptop is the day it becomes the worst
+// hole in the product.
+if (app.Environment.IsDevelopment())
+{
+    app.MapRazorPages();
+
+    app.MapGet("/pay-link/{invoiceId:guid}", (Guid invoiceId, IConfiguration configuration) =>
+    {
+        var baseUrl = configuration["Checkout:BaseUrl"]?.TrimEnd('/') ?? "http://localhost:5082";
+        return Results.Redirect($"{baseUrl}/pay/{invoiceId}");
+    });
+}
 
 app.Run();
 

@@ -31,6 +31,10 @@ public sealed class RawEventConfiguration : IEntityTypeConfiguration<RawEvent>
         builder.Property(x => x.Body).HasMaxLength(2000).IsRequired();
         builder.Property(x => x.DedupeHash).HasMaxLength(64).IsRequired();
 
+        // Long enough for an exception's type and message, short enough that nobody is
+        // tempted to put a stack trace in the database.
+        builder.Property(x => x.FailureReason).HasMaxLength(500);
+
         // The safety net. Same message uploaded ten times, stored once.
         builder.HasIndex(x => x.DedupeHash).IsUnique();
 
