@@ -8,6 +8,7 @@ using YoPay.Application.Devices;
 using YoPay.Application.Ingestion;
 using YoPay.Application.Invoicing;
 using YoPay.Application.Security;
+using YoPay.Application.Webhooks;
 using YoPay.Domain.Entities;
 using YoPay.Domain.Enums;
 using YoPay.Infrastructure.Persistence;
@@ -36,18 +37,25 @@ namespace YoPay.Api.Pages;
 public class DashboardModel(
     YoPayDbContext db,
     CreateInvoiceService invoices,
-    ISecretProtector protector) : PageModel
+    ISecretProtector protector,
+    WebhookOptions webhookOptions) : PageModel
 {
     public IReadOnlyList<Merchant> Merchants { get; private set; } = [];
     public IReadOnlyList<InvoiceRow> Invoices { get; private set; } = [];
     public IReadOnlyList<DeviceRow> Devices { get; private set; } = [];
     public IReadOnlyList<EventRow> Events { get; private set; } = [];
+    public IReadOnlyList<EndpointRow> Endpoints { get; private set; } = [];
+    public IReadOnlyList<DeliveryRow> Deliveries { get; private set; } = [];
 
     [TempData] public string? Notice { get; set; }
     [TempData] public string? PairingCode { get; set; }
     [TempData] public string? CheckoutUrl { get; set; }
     [TempData] public string? IssuedKeyId { get; set; }
     [TempData] public string? IssuedSecret { get; set; }
+    [TempData] public string? WebhookSecret { get; set; }
+
+    [BindProperty]
+    public string? WebhookUrl { get; set; }
 
     [BindProperty]
     public decimal Amount { get; set; } = 500m;
@@ -326,6 +334,104 @@ public class DashboardModel(
         return RedirectToPage();
     }
 
+    /// <summary>
+    /// Registers where this merchant wants notifications sent.
+    ///
+    /// The URL is checked before it is stored, so a merchant who pastes an http:// address
+    /// or a private host is told while they are looking at the form. That check is the
+    /// friendly half of the SSRF defence; the half that matters runs in the connect
+    /// callback at dial time, because the address a hostname resolves to can change
+    /// between here and the request.
+    ///
+    /// The signing secret is shown once and stored encrypted. There is no screen anywhere
+    /// that can show it again, and that is deliberate rather than an omission.
+    /// </summary>
+    public async Task<IActionResult> OnPostAddEndpointAsync(CancellationToken ct)
+    {
+        var merchant = await db.Merchants.AsNoTracking().FirstOrDefaultAsync(ct).ConfigureAwait(false);
+        if (merchant is null)
+        {
+            Notice = "Seed a merchant first.";
+            return RedirectToPage();
+        }
+
+        var check = WebhookEndpointRules.Check(WebhookUrl, webhookOptions.AllowPrivateEndpoints);
+        if (!check.Accepted)
+        {
+            Notice = check.Error;
+            return RedirectToPage();
+        }
+
+        var secret = WebhookEndpointRules.NewSecret();
+
+        db.WebhookEndpoints.Add(new WebhookEndpoint
+        {
+            MerchantId = merchant.Id,
+            Url = check.Url!.ToString(),
+            SecretEncrypted = protector.Protect(secret),
+
+            // The shape check has passed, which is what Valid means here: the dispatcher
+            // may try it. Whether anything answers is decided by the first delivery.
+            State = WebhookEndpointState.Valid,
+            LastCheckedAt = DateTimeOffset.UtcNow,
+            IsActive = true,
+        });
+
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        WebhookSecret = secret;
+        Notice = "Endpoint registered. The signing secret is shown once.";
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostToggleEndpointAsync(Guid endpointId, CancellationToken ct)
+    {
+        var endpoint = await db.WebhookEndpoints
+            .FirstOrDefaultAsync(e => e.Id == endpointId, ct)
+            .ConfigureAwait(false);
+
+        if (endpoint is null)
+        {
+            Notice = "Endpoint not found.";
+            return RedirectToPage();
+        }
+
+        endpoint.IsActive = !endpoint.IsActive;
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        Notice = endpoint.IsActive ? "Endpoint enabled." : "Endpoint paused.";
+        return RedirectToPage();
+    }
+
+    /// <summary>
+    /// Sends a dead-lettered delivery again.
+    ///
+    /// The counterpart to giving up. Retrying forever is not a promise anyone can keep, so
+    /// the dispatcher stops after five attempts - but the notification is still owed, and
+    /// once the merchant has fixed their certificate or paid their hosting bill there has
+    /// to be a way to hand it over that is not a database update typed by hand.
+    /// </summary>
+    public async Task<IActionResult> OnPostReplayAsync(Guid deliveryId, CancellationToken ct)
+    {
+        var updated = await db.WebhookDeliveries
+            .Where(d => d.Id == deliveryId)
+            .ExecuteUpdateAsync(
+                s => s
+                    .SetProperty(d => d.Status, DeliveryStatus.Pending)
+                    .SetProperty(d => d.Attempt, 0)
+                    .SetProperty(d => d.NextRetryAt, DateTimeOffset.UtcNow)
+                    .SetProperty(d => d.LastError, (string?)null),
+                ct)
+            .ConfigureAwait(false);
+
+        Notice = updated == 1
+            ? "Queued for delivery again."
+            : "Delivery not found.";
+
+        return RedirectToPage();
+    }
+
     private async Task LoadAsync(CancellationToken ct)
     {
         Merchants = await db.Merchants.AsNoTracking().ToListAsync(ct).ConfigureAwait(false);
@@ -363,6 +469,24 @@ public class DashboardModel(
         // reloading itself over it hides that instead of showing it.
         var fresh = DateTimeOffset.UtcNow.AddSeconds(-60);
 
+        Endpoints = await db.WebhookEndpoints
+            .AsNoTracking()
+            .OrderBy(e => e.CreatedAt)
+            .Select(e => new EndpointRow(
+                e.Id, e.Url, e.State, e.IsActive, e.LastFailureReason))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        Deliveries = await db.WebhookDeliveries
+            .AsNoTracking()
+            .OrderByDescending(d => d.CreatedAt)
+            .Take(15)
+            .Select(d => new DeliveryRow(
+                d.Id, d.EventType, d.Status, d.Attempt, d.ResponseCode,
+                d.LastError, d.NextRetryAt))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
         Working = Events.Any(e =>
             (e.State is RawEventState.Received or RawEventState.Claimed) &&
             e.DeviceReceivedAt > fresh);
@@ -384,6 +508,13 @@ public class DashboardModel(
     public sealed record DeviceRow(
         Guid Id, string? Model, string? AppVersion, DateTimeOffset? LastHeartbeatAt,
         DevicePermissionState PermissionState, int? BatteryPercent);
+
+    public sealed record EndpointRow(
+        Guid Id, string Url, WebhookEndpointState State, bool IsActive, string? LastFailureReason);
+
+    public sealed record DeliveryRow(
+        Guid Id, string EventType, DeliveryStatus Status, int Attempt, int? ResponseCode,
+        string? LastError, DateTimeOffset? NextRetryAt);
 
     public sealed record EventRow(
         Guid Id, string SenderId, string Body, RawEventState State,

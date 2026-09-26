@@ -92,11 +92,13 @@ public static class RequestSignature
 
         var expected = Sign(secret, request);
 
-        // Constant time: a byte-by-byte comparison leaks how much of a forged signature
-        // was right, which is enough to build the rest of it one request at a time.
+        // Compared without regard to case. The signature is hex, where case carries no
+        // information at all, and half the languages an SDK might be written in produce
+        // lower case by default while .NET produces upper. Rejecting a correct signature
+        // over that is a night of debugging for an integrator and buys nothing.
         var match = CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(expected),
-            Encoding.UTF8.GetBytes(request.Signature));
+            Encoding.UTF8.GetBytes(expected.ToUpperInvariant()),
+            Encoding.UTF8.GetBytes(request.Signature.ToUpperInvariant()));
 
         return match ? SignatureResult.Ok : SignatureResult.Fail(SignatureFailure.Invalid);
     }

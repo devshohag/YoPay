@@ -32,4 +32,14 @@ public interface IInvoiceStore
 
     /// <summary>Saves the invoice and its first session together, or neither.</summary>
     Task SaveAsync(Invoice invoice, PaymentSession session, CancellationToken ct = default);
+
+    /// <summary>
+    /// Writes a cancelled invoice and closes its open sessions, together.
+    ///
+    /// Together because the session holds the amount reservation. Saving the invoice and
+    /// leaving the session open would keep that amount unusable on the wallet while
+    /// showing a cancelled order - and the merchant would have no way to see why the next
+    /// invoice for the same amount behaves oddly.
+    /// </summary>
+    Task CancelAsync(Invoice invoice, CancellationToken ct = default);
 }

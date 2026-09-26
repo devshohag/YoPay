@@ -203,6 +203,8 @@ public sealed class EfPaymentMatcher(YoPayDbContext db) : IPaymentMatcher
         // the match or the match without the notification. T9 delivers it.
         db.OutboxMessages.Add(new OutboxMessage
         {
+            MerchantId = invoice.MerchantId,
+            InvoiceId = invoice.Id,
             Type = status == InvoiceStatus.Paid
                 ? WebhookEvents.PaymentPaid
                 : WebhookEvents.PaymentPartial,

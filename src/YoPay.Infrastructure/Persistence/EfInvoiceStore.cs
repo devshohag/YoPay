@@ -81,4 +81,38 @@ public sealed class EfInvoiceStore(YoPayDbContext db) : IInvoiceStore
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
+
+    public async Task CancelAsync(Invoice invoice, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(invoice);
+
+        // The execution strategy owns the transaction: the connection retries on a
+        // transient failure and refuses a transaction opened behind its back.
+        await db.Database
+            .CreateExecutionStrategy()
+            .ExecuteAsync(async () =>
+            {
+                await using var transaction = await db.Database
+                    .BeginTransactionAsync(ct)
+                    .ConfigureAwait(false);
+
+                await db.Invoices
+                    .Where(i => i.Id == invoice.Id)
+                    .ExecuteUpdateAsync(
+                        s => s.SetProperty(i => i.Status, invoice.Status), ct)
+                    .ConfigureAwait(false);
+
+                // Freeing the reserved amount is the point of cancelling, not a tidy-up
+                // afterwards: while this session is open no other invoice on this wallet
+                // may expect the same amount.
+                await db.PaymentSessions
+                    .Where(s => s.InvoiceId == invoice.Id && s.State == SessionState.Open)
+                    .ExecuteUpdateAsync(
+                        s => s.SetProperty(x => x.State, SessionState.Cancelled), ct)
+                    .ConfigureAwait(false);
+
+                await transaction.CommitAsync(ct).ConfigureAwait(false);
+            })
+            .ConfigureAwait(false);
+    }
 }

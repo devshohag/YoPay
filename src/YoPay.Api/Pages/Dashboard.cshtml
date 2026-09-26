@@ -35,6 +35,10 @@
         .AwaitingPayment, .Received, .Claimed { background: #e0f2fe; color: #075985; }
         .Partial, .PendingReview, .Unparseable { background: #fef3c7; color: #92400e; }
         .Expired, .Cancelled, .Ignored { background: #f1f5f9; color: #475569; }
+        .Succeeded, .Valid, .Dispatched { background: #d1fae5; color: #065f46; }
+        .Pending, .Unvalidated { background: #e0f2fe; color: #075985; }
+        .Failed { background: #fef3c7; color: #92400e; }
+        .DeadLettered, .Rejected { background: #fee2e2; color: #991b1b; }
         input, button { font-size: 14px; padding: 7px 10px; border: 1px solid #cbd5e1;
                         border-radius: 6px; }
         button { background: #0d9488; color: #fff; border: 0; font-weight: 600; cursor: pointer; }
@@ -70,6 +74,15 @@
                 <div class="mono" style="margin-top:6px">
                     KeyId&nbsp; @Model.IssuedKeyId<br />
                     Secret&nbsp; @Model.IssuedSecret
+                </div>
+            }
+            @if (Model.WebhookSecret is not null)
+            {
+                <div class="mono" style="margin-top:6px">Signing secret&nbsp; @Model.WebhookSecret</div>
+                <div class="muted" style="font-size:12px">
+                    Verify every delivery with it. X-YoPay-Signature is
+                    <span class="mono">t=&lt;unix&gt;,v1=&lt;hex&gt;</span>, an HMAC-SHA256 over
+                    <span class="mono">"&lt;t&gt;.&lt;raw body&gt;"</span>.
                 </div>
             }
             @if (Model.PairingCode is not null)
@@ -167,6 +180,84 @@
             @if (Model.Devices.Count == 0)
             {
                 <tr><td colspan="5" class="muted">no device paired</td></tr>
+            }
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Webhook endpoints</h2>
+        <form method="post" asp-page-handler="AddEndpoint">
+            @Html.AntiForgeryToken()
+            <input name="WebhookUrl" style="width:380px" placeholder="https://shop.example.com/yopay" />
+            <button type="submit">Register</button>
+        </form>
+        <table style="margin-top:10px">
+            <tr><th>URL</th><th style="width:100px">State</th><th style="width:80px">Active</th><th style="width:70px"></th></tr>
+            @foreach (var e in Model.Endpoints)
+            {
+                <tr>
+                    <td class="mono">
+                        @e.Url
+                        @if (!string.IsNullOrWhiteSpace(e.LastFailureReason))
+                        {
+                            <div class="why">@e.LastFailureReason</div>
+                        }
+                    </td>
+                    <td><span class="pill @e.State">@e.State</span></td>
+                    <td class="@(e.IsActive ? "" : "muted")">@(e.IsActive ? "yes" : "paused")</td>
+                    <td>
+                        <form method="post" asp-page-handler="ToggleEndpoint">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="endpointId" value="@e.Id" />
+                            <button type="submit" style="background:#475569;padding:3px 8px;font-size:12px">
+                                @(e.IsActive ? "pause" : "enable")
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (Model.Endpoints.Count == 0)
+            {
+                <tr><td colspan="4" class="muted">
+                    none registered &mdash; payments settle, but nothing on the merchant's side is told
+                </td></tr>
+            }
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Webhook deliveries</h2>
+        <table>
+            <tr><th style="width:110px">Status</th><th>Event</th><th style="width:60px">Tries</th><th style="width:70px">Code</th><th style="width:130px">Next try</th><th style="width:70px"></th></tr>
+            @foreach (var d in Model.Deliveries)
+            {
+                <tr>
+                    <td><span class="pill @d.Status">@d.Status</span></td>
+                    <td class="mono">
+                        @d.EventType
+                        @if (!string.IsNullOrWhiteSpace(d.LastError))
+                        {
+                            <div class="why">@d.LastError</div>
+                        }
+                    </td>
+                    <td>@d.Attempt</td>
+                    <td class="mono">@(d.ResponseCode?.ToString() ?? "—")</td>
+                    <td class="muted">@(d.NextRetryAt?.ToLocalTime().ToString("HH:mm:ss") ?? "—")</td>
+                    <td>
+                        @if (d.Status == DeliveryStatus.DeadLettered || d.Status == DeliveryStatus.Failed)
+                        {
+                            <form method="post" asp-page-handler="Replay">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="deliveryId" value="@d.Id" />
+                                <button type="submit" style="background:#7c3aed;padding:3px 8px;font-size:12px">replay</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            @if (Model.Deliveries.Count == 0)
+            {
+                <tr><td colspan="6" class="muted">nothing sent yet</td></tr>
             }
         </table>
     </div>

@@ -18,5 +18,17 @@ public class WebhookEndpoint : MerchantEntity
     public string? LastFailureReason { get; set; }
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// The signing secret for this endpoint, encrypted at rest, shown to the merchant
+    /// exactly once when the endpoint is registered.
+    ///
+    /// Its own secret rather than the API credential's, for two reasons. An API key can
+    /// be rotated because a developer left, without silently breaking every webhook
+    /// signature check on the merchant's server; and a merchant with two endpoints - a
+    /// live shop and a staging box - should not have to give the staging box a secret
+    /// that can also sign requests to the live API.
+    /// </summary>
+    public string SecretEncrypted { get; set; } = null!;
+
     public Merchant Merchant { get; set; } = null!;
 }

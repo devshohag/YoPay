@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- Deliberately not in YoPay.sln. This is what a merchant's own project looks like
+         from the outside: it references the published SDK and nothing else of ours, so
+         if it ever needs an internal type, that is a design failure in the SDK. -->
+    <UserSecretsId>yopay-demo-shop</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\sdk\dotnet\YoPay.Sdk\YoPay.Sdk.csproj" />
+  </ItemGroup>
+
+</Project>

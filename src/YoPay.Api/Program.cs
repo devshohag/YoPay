@@ -5,6 +5,7 @@ using YoPay.Api.Endpoints;
 using YoPay.Application.Invoicing;
 using YoPay.Application.Security;
 using YoPay.Infrastructure;
+using YoPay.Application.Webhooks;
 
 // Merchant-facing REST API.
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +15,7 @@ builder.Services.AddYoPaySecurity(builder.Configuration);
 
 builder.Services.AddScoped<MerchantContext>();
 builder.Services.AddScoped<CreateInvoiceService>();
+builder.Services.AddScoped<CancelInvoiceService>();
 builder.Services.AddRazorPages();
 
 // Partitioned by API key, falling back to the remote address for requests that never got
@@ -37,11 +39,19 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+// Said out loud, every start, so an instance running with the guard loosened cannot do so
+// quietly. A setting nobody can see is a setting nobody turns back off.
+if (app.Configuration.GetValue<bool>(WebhookOptions.AllowPrivateEndpointsKey))
+{
+    app.Logger.LogWarning("{Warning}", WebhookOptions.Warning);
+}
+
 app.UseRateLimiter();
 app.UseMiddleware<SignedRequestMiddleware>();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "YoPay.Api" }));
 app.MapPaymentEndpoints(app.Configuration);
+app.MapWebhookEndpoints();
 
 // The development console, and the link the dashboard uses to open a checkout page.
 // Mapped only in Development: it has no authentication and reads every merchant's data,

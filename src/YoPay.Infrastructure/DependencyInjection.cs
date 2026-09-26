@@ -7,7 +7,9 @@ using YoPay.Application.Ingestion;
 using YoPay.Application.Matching;
 using YoPay.Application.Invoicing;
 using YoPay.Application.Security;
+using YoPay.Application.Webhooks;
 using YoPay.Infrastructure.Matching;
+using YoPay.Infrastructure.Webhooks;
 using YoPay.Infrastructure.Persistence;
 using YoPay.Infrastructure.Persistence.Interceptors;
 using YoPay.Infrastructure.Security;
@@ -49,6 +51,8 @@ public static class DependencyInjection
         services.AddScoped<IRawEventStore, EfRawEventStore>();
         services.AddScoped<IPipelineStore, EfPipelineStore>();
         services.AddScoped<IPaymentMatcher, EfPaymentMatcher>();
+        services.AddScoped<IWebhookStore, EfWebhookStore>();
+        services.AddScoped<IWebhookEndpointStore, EfWebhookEndpointStore>();
 
         return services;
     }
@@ -78,12 +82,25 @@ public static class DependencyInjection
         services.AddScoped<ICredentialLookup, EfCredentialLookup>();
         services.AddScoped<SignatureVerifier>();
 
+        // One switch, read once, used by both halves of the guard - the URL check when a
+        // merchant saves an endpoint and the connect callback when the dispatcher dials
+        // it. Two separate settings would eventually disagree, and the half that stayed
+        // on would silently stop mattering.
+        var allowPrivateEndpoints =
+            configuration.GetValue<bool>(WebhookOptions.AllowPrivateEndpointsKey);
+
+        services.AddSingleton(new WebhookOptions { AllowPrivateEndpoints = allowPrivateEndpoints });
+
         services.AddHttpClient(OutboundHttpClient, client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(15);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("YoPay-Webhook/1.0");
             })
-            .ConfigurePrimaryHttpMessageHandler(OutboundConnect.CreateHandler);
+            .ConfigurePrimaryHttpMessageHandler(
+                () => OutboundConnect.CreateHandler(allowPrivateEndpoints));
+
+        // Registered beside the client it depends on, so the two cannot drift apart.
+        services.AddScoped<IWebhookSender, HttpWebhookSender>();
 
         return services;
     }

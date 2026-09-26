@@ -14,9 +14,17 @@
   <ItemGroup>
     <!-- The golden corpus travels with the test binary; the parser tests replay it. -->
     <None Include="..\fixtures\bkash\corpus.tsv" Link="fixtures/corpus.tsv" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\sdk\php\tests\vectors.json" Link="fixtures/vectors.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\YoPay.Domain\YoPay.Domain.csproj" />
     <ProjectReference Include="..\..\src\YoPay.Application\YoPay.Application.csproj" />
+
+    <!-- The published SDK, tested from the same run as the server.
+         The SDK reimplements the signatures rather than referencing the server's code -
+         it has to, or every merchant would be coupled to our internals - and two
+         implementations of one MAC drift silently. This reference is what makes the
+         drift fail a build instead of arriving as an unexplainable 401. -->
+    <ProjectReference Include="..\..\sdk\dotnet\YoPay.Sdk\YoPay.Sdk.csproj" />
   </ItemGroup>
 </Project>

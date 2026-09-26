@@ -17,7 +17,7 @@ persistence. See `docs/` in the planning PDFs for the full phase plan.
     src/YoPay.Infrastructure  EF Core 10, DbContext, configurations, migrations
     src/YoPay.Api             merchant REST API: signed requests, create and verify
     src/YoPay.Ingest.Api      device-only ingest endpoint             (filled in T6)
-    src/YoPay.Checkout        hosted payment page                     (filled in T5)
+    src/YoPay.Checkout        hosted payment page the customer sees
     src/YoPay.Worker          parser, matcher, webhook dispatcher     (filled in T7-T9)
     src/YoPay.Scheduler       session expiry, retries, billing        (filled in T12)
     src/YoPay.Application     ... plus Parsing: bKash templates and the message parser

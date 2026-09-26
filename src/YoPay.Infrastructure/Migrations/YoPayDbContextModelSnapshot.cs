@@ -533,10 +533,18 @@ namespace YoPay.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
                     b.Property<string>("LastError")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("last_error");
+
+                    b.Property<Guid>("MerchantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("merchant_id");
 
                     b.Property<DateTimeOffset>("NextAttemptAt")
                         .HasColumnType("timestamp with time zone")
@@ -571,6 +579,9 @@ namespace YoPay.Infrastructure.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_outbox_messages");
+
+                    b.HasIndex("InvoiceId")
+                        .HasDatabaseName("ix_outbox_messages_invoice_id");
 
                     b.HasIndex("Status", "NextAttemptAt")
                         .HasDatabaseName("ix_outbox_messages_status_next_attempt_at");
@@ -1175,6 +1186,12 @@ namespace YoPay.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("event_type");
+
                     b.Property<Guid>("InvoiceId")
                         .HasColumnType("uuid")
                         .HasColumnName("invoice_id");
@@ -1202,7 +1219,6 @@ namespace YoPay.Infrastructure.Migrations
                         .HasColumnName("response_code");
 
                     b.Property<string>("Signature")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("signature");
@@ -1261,6 +1277,12 @@ namespace YoPay.Infrastructure.Migrations
                     b.Property<Guid>("MerchantId")
                         .HasColumnType("uuid")
                         .HasColumnName("merchant_id");
+
+                    b.Property<string>("SecretEncrypted")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("secret_encrypted");
 
                     b.Property<int>("State")
                         .HasColumnType("integer")

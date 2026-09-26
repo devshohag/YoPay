@@ -40,4 +40,23 @@ internal sealed class FakeInvoiceStore : IInvoiceStore
         Sessions.Add(session);
         return Task.CompletedTask;
     }
+
+    public List<Guid> Cancelled { get; } = [];
+
+    public Task CancelAsync(Invoice invoice, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(invoice);
+
+        Cancelled.Add(invoice.Id);
+
+        // The real store closes the sessions in the same transaction, and a test that
+        // did not would let a service forget to ask for it.
+        foreach (var session in Sessions.Where(s =>
+                     s.InvoiceId == invoice.Id && s.State == SessionState.Open))
+        {
+            session.State = SessionState.Cancelled;
+        }
+
+        return Task.CompletedTask;
+    }
 }

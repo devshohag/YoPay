@@ -10,10 +10,24 @@ namespace YoPay.Infrastructure.Security;
 /// </summary>
 public static class OutboundConnect
 {
-    public static SocketsHttpHandler CreateHandler() => new()
+    public static SocketsHttpHandler CreateHandler() => CreateHandler(allowPrivateAddresses: false);
+
+    /// <summary>
+    /// <paramref name="allowPrivateAddresses"/> exists for one situation and one only: a
+    /// developer running YoPay and their own shop on the same laptop, where the webhook
+    /// URL is http://localhost:5000 and every guard in this file is correctly in the way.
+    ///
+    /// It is off unless Webhooks:AllowPrivateEndpoints is set, the host logs a warning
+    /// when it is on, and turning it on in production hands a merchant the ability to make
+    /// this server fetch its own cloud metadata endpoint and read the answer back off a
+    /// delivery row. The alternative was a developer disabling the guard by hand and
+    /// forgetting to put it back, which is how that ends up in production permanently.
+    /// </summary>
+    public static SocketsHttpHandler CreateHandler(bool allowPrivateAddresses) => new()
     {
         AllowAutoRedirect = false, // a 302 to 127.0.0.1 would otherwise walk straight past this
-        ConnectCallback = static (context, ct) => ConnectAsync(context.DnsEndPoint, ct),
+        ConnectCallback = (context, ct) =>
+            ConnectAsync(context.DnsEndPoint, allowPrivateAddresses, ct),
         ConnectTimeout = TimeSpan.FromSeconds(10),
         PooledConnectionLifetime = TimeSpan.FromMinutes(2),
     };
@@ -24,7 +38,11 @@ public static class OutboundConnect
     /// inspected, there is no window in which a second DNS answer redirects the connection
     /// inward.
     /// </summary>
-    public static async ValueTask<Stream> ConnectAsync(DnsEndPoint endPoint, CancellationToken ct)
+    public static ValueTask<Stream> ConnectAsync(DnsEndPoint endPoint, CancellationToken ct) =>
+        ConnectAsync(endPoint, allowPrivateAddresses: false, ct);
+
+    public static async ValueTask<Stream> ConnectAsync(
+        DnsEndPoint endPoint, bool allowPrivateAddresses, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(endPoint);
 
@@ -46,7 +64,9 @@ public static class OutboundConnect
             }
         }
 
-        var permitted = Array.FindAll(resolved, OutboundAddressPolicy.IsPubliclyRoutable);
+        var permitted = allowPrivateAddresses
+            ? resolved
+            : Array.FindAll(resolved, OutboundAddressPolicy.IsPubliclyRoutable);
 
         if (permitted.Length == 0)
         {

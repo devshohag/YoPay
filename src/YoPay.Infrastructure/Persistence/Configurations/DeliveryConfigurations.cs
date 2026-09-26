@@ -13,6 +13,7 @@ public sealed class WebhookEndpointConfiguration : IEntityTypeConfiguration<Webh
         builder.ToTable("webhook_endpoints");
         builder.Property(x => x.Url).HasMaxLength(2000).IsRequired();
         builder.Property(x => x.LastFailureReason).HasMaxLength(500);
+        builder.Property(x => x.SecretEncrypted).HasMaxLength(500).IsRequired();
 
         builder.HasIndex(x => new { x.MerchantId, x.IsActive });
 
@@ -36,6 +37,8 @@ public sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<Outbox
 
         // The dispatcher's only query: what is due now, oldest first.
         builder.HasIndex(x => new { x.Status, x.NextAttemptAt });
+
+        builder.HasIndex(x => x.InvoiceId);
     }
 }
 
@@ -47,7 +50,8 @@ public sealed class WebhookDeliveryConfiguration : IEntityTypeConfiguration<Webh
 
         builder.ToTable("webhook_deliveries");
         builder.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();
-        builder.Property(x => x.Signature).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.EventType).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Signature).HasMaxLength(200);
         builder.Property(x => x.LastError).HasMaxLength(1000);
 
         builder.HasIndex(x => new { x.Status, x.NextRetryAt });

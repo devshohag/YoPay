@@ -83,6 +83,90 @@ public static class PaymentEndpoints
                 : Results.Ok(response);
         });
 
+        // Same answer as /verify, addressed the way a REST client expects. Both exist
+        // because the SDKs call verify with whichever identifier they are holding - an
+        // order reference from their own database, usually, not our invoice id.
+        group.MapGet("/{invoiceId:guid}", async (
+            Guid invoiceId,
+            MerchantContext merchant,
+            IInvoiceStore store,
+            CancellationToken ct) =>
+        {
+            if (!merchant.IsAuthenticated)
+            {
+                return Results.Unauthorized();
+            }
+
+            var invoice = await store
+                .FindByIdAsync(merchant.MerchantId, invoiceId, ct)
+                .ConfigureAwait(false);
+
+            // Not found rather than forbidden when it belongs to another merchant: the
+            // lookup is scoped by merchant, so this answer cannot be used to discover
+            // which invoice ids exist.
+            if (invoice is null)
+            {
+                return Results.NotFound();
+            }
+
+            return Results.Ok(new InvoiceResponse
+            {
+                InvoiceId = invoice.Id,
+                OrderRef = invoice.OrderRef,
+                Amount = invoice.Amount,
+                ChargedAmount = invoice.ChargedAmount,
+                Currency = invoice.Currency,
+                Status = invoice.Status,
+                ExpiresAt = invoice.ExpiresAt,
+                CheckoutUrl = $"{checkoutBaseUrl}/pay/{invoice.Id}",
+            });
+        });
+
+        group.MapPost("/cancel", async (
+            CancelInvoiceRequest request,
+            MerchantContext merchant,
+            CancelInvoiceService service,
+            CancellationToken ct) =>
+        {
+            if (!merchant.IsAuthenticated)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await service
+                .CancelAsync(merchant.MerchantId, request.InvoiceId, request.OrderRef, ct)
+                .ConfigureAwait(false);
+
+            if (result.Outcome == CancelInvoiceOutcome.NotFound)
+            {
+                return Results.NotFound();
+            }
+
+            if (result.Outcome == CancelInvoiceOutcome.Refused)
+            {
+                // 409 rather than 400: the request was well formed, the invoice is simply
+                // past the point where calling it off means anything.
+                return Results.Problem(
+                    title: result.Reason,
+                    statusCode: StatusCodes.Status409Conflict);
+            }
+
+            var invoice = result.Invoice!;
+
+            // Cancelling something already cancelled answers 200 as well. The caller is a
+            // retrying HTTP client and the state it asked for is the state it has.
+            return Results.Ok(new InvoiceResponse
+            {
+                InvoiceId = invoice.Id,
+                OrderRef = invoice.OrderRef,
+                Amount = invoice.Amount,
+                ChargedAmount = invoice.ChargedAmount,
+                Currency = invoice.Currency,
+                Status = invoice.Status,
+                ExpiresAt = invoice.ExpiresAt,
+            });
+        });
+
         group.MapPost("/verify", async (
             VerifyInvoiceRequest request,
             MerchantContext merchant,

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      net8.0, with no package references at all.
+
+      netstandard2.0 was the obvious choice - a share of the ASP.NET MVC shops in this
+      market are still on .NET Framework - but reaching it means depending on the
+      System.Text.Json package, and a payment SDK that drags a versioned dependency into
+      someone else's project is a security advisory waiting to land in their build. From
+      net8.0 onwards the serialiser is part of the shared framework and this library needs
+      nothing.
+
+      A .NET Framework shop is not stranded: YoPaySignature.cs has no dependencies beyond
+      System.Security.Cryptography and compiles anywhere back to 4.6.2. Copy that one file
+      and call the API with your own HttpClient - the README shows it.
+    -->
+    <!-- net8.0 as well as net10.0 so a merchant on the current LTS can reference the
+         compiled library. If your machine has no .NET 8 targeting pack and cannot fetch
+         one, dropping net8.0 from this line costs nothing but that. -->
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>false</ImplicitUsings>
+
+    <PackageId>YoPay.Sdk</PackageId>
+    <Description>Client for the YoPay payment API: invoices, verification and webhook signatures.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>
