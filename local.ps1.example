@@ -1,0 +1,28 @@
+<#
+    Copy this to local.ps1 and fill in a key. local.ps1 is gitignored; this file is not.
+
+    scripts\run-all.ps1 dot-sources local.ps1 and then starts every service from the same
+    shell, which is the point: half an evening once went into
+    "Security:ActiveKeyId is not configured" because each terminal had a different key,
+    or none.
+#>
+
+# The key ring. The API refuses to start without one, deliberately - a payment service
+# that boots with no way to decrypt its own credentials looks healthy right up until the
+# first real request.
+#
+# Generate one (Windows PowerShell 5.1 included):
+#   $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+#   $bytes = New-Object byte[] 32
+#   $rng.GetBytes($bytes)
+#   [Convert]::ToBase64String($bytes)
+$env:Security__ActiveKeyId = 'k1'
+$env:Security__Keys__k1 = 'PASTE-A-BASE64-32-BYTE-KEY-HERE'
+
+# Only needed by dotnet ef; the hosts read it from appsettings.json.
+$env:ConnectionStrings__Postgres = 'Host=localhost;Port=5433;Database=yopay;Username=yopay;Password=yopay'
+
+# Lets a webhook point at http://localhost, which the outbound guard refuses by design.
+# Turn it on while integrating your own shop on this machine. Both hosts log a warning on
+# every start while it is set, and it must never be set on a deployed instance.
+# $env:Webhooks__AllowPrivateEndpoints = 'true'
