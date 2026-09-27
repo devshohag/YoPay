@@ -64,7 +64,7 @@ Optional: `walletId`, `customerName`, `customerEmail`, `customerMsisdn`, `redire
 }
 ```
 
-Show **`chargedAmount`**, never `amount`. YoPay may adjust the figure by a few poisha so
+Show **`chargedAmount`**, never `amount`. YoPay may add a taka or two (never subtract) so
 that the incoming amount is unambiguous on that wallet; `chargedAmount` is what the
 customer must actually send, and telling them anything else means the payment will not
 match.

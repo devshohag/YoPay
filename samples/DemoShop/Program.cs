@@ -60,7 +60,7 @@ app.MapPost("/buy", async (
             MetadataJson = JsonSerializer.Serialize(new { orderId = order.Reference }),
         });
 
-        // ChargedAmount, never Amount. YoPay may adjust the figure by a few poisha so the
+        // ChargedAmount, never Amount. YoPay may add a taka or two, never subtract, so the
         // incoming amount is unambiguous on that wallet, and this is what the customer
         // must actually send. Show them Amount and the payment will not match.
         orders.Awaiting(order.Reference, invoice.InvoiceId, invoice.ChargedAmount);

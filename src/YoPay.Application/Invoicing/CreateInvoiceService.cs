@@ -92,6 +92,7 @@ public sealed class CreateInvoiceService(IInvoiceStore store, IClock clock)
             OrderRef = command.OrderRef,
             Amount = command.Amount,
             ChargedAmount = chargedAmount,
+            Mode = mode,
             Status = InvoiceStatus.AwaitingPayment,
             CreatedAt = now,
             ExpiresAt = expiresAt,

@@ -63,6 +63,7 @@ public sealed class EfInvoiceStore(YoPayDbContext db) : IInvoiceStore
                 PayToNumber = x.w.Number,
                 AccountType = x.w.AccountType,
                 Status = x.i.Status,
+                Mode = x.i.Mode,
                 ExpiresAt = x.i.ExpiresAt,
                 GraceUntil = x.i.GraceUntil,
                 RedirectUrl = x.i.RedirectUrl,

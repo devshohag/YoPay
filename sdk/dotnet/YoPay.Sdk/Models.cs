@@ -22,6 +22,26 @@ public sealed class CreateInvoiceRequest
 
     /// <summary>Anything you want handed back to you on the webhook, as a JSON string.</summary>
     public string? MetadataJson { get; set; }
+
+    /// <summary>
+    /// Leave it null for the transaction-id flow, which is the default.
+    ///
+    /// <see cref="MatchingModes.UniqueAmount"/> is the zero-input experience: the customer
+    /// is shown one exact figure and told to send it, and types nothing. YoPay cannot
+    /// always grant it - if every figure near this price is already reserved by another
+    /// open invoice on the same wallet, the invoice comes back on the transaction-id flow
+    /// instead. Read <see cref="Invoice.Mode"/> on the response rather than assuming.
+    /// </summary>
+    public string? Mode { get; set; }
+}
+
+public static class MatchingModes
+{
+    /// <summary>The customer copies the transaction id onto the checkout page.</summary>
+    public const string TrxId = "TrxId";
+
+    /// <summary>The customer types nothing; the exact amount is the identifier.</summary>
+    public const string UniqueAmount = "UniqueAmount";
 }
 
 public sealed class Invoice
@@ -35,7 +55,7 @@ public sealed class Invoice
     /// <summary>
     /// What the customer must actually send, and the only figure to show them.
     ///
-    /// YoPay may adjust the amount by a few poisha so the incoming figure is unambiguous
+    /// YoPay may add a taka or two - never subtract - so the incoming figure is unambiguous
     /// on that wallet. Display Amount instead and the customer sends the wrong number,
     /// which does not match and lands in the review queue.
     /// </summary>
@@ -45,6 +65,12 @@ public sealed class Invoice
     public string Status { get; set; } = string.Empty;
     public DateTimeOffset ExpiresAt { get; set; }
     public string? CheckoutUrl { get; set; }
+
+    /// <summary>Which flow the customer will see. Not always what was asked for.</summary>
+    public string Mode { get; set; } = MatchingModes.TrxId;
+
+    /// <summary>True when the customer will not be asked to type anything.</summary>
+    public bool IsZeroInput => Mode == MatchingModes.UniqueAmount;
 
     public bool IsPaid => Status == InvoiceStatuses.Paid || Status == InvoiceStatuses.Settled;
 }

@@ -35,6 +35,17 @@ public class Invoice : MerchantEntity
 
     public DateTimeOffset? PaidAt { get; set; }
 
+    /// <summary>
+    /// Which flow this invoice is on, decided when it was created and fixed afterwards.
+    ///
+    /// Stored rather than recomputed because two different things read it at two different
+    /// times: the checkout page, which must show a transaction id box or not, and the
+    /// matcher, which must know whether an unclaimed payment of exactly this amount is
+    /// allowed to settle it. Recomputing from the wallet's current state would let an
+    /// invoice quietly change flows underneath a customer who already has the page open.
+    /// </summary>
+    public MatchingMode Mode { get; set; } = MatchingMode.TrxId;
+
     public string? CustomerName { get; set; }
     public string? CustomerEmail { get; set; }
     public string? CustomerMsisdn { get; set; }

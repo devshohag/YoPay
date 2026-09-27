@@ -10,7 +10,9 @@ public class SubmitClaimServiceTests
     private static readonly Guid InvoiceId = Guid.CreateVersion7();
 
     private static CheckoutView View(
-        InvoiceStatus status = InvoiceStatus.AwaitingPayment, DateTimeOffset? graceUntil = null) => new()
+        InvoiceStatus status = InvoiceStatus.AwaitingPayment,
+        DateTimeOffset? graceUntil = null,
+        MatchingMode mode = MatchingMode.TrxId) => new()
     {
         InvoiceId = InvoiceId,
         MerchantName = "Test Shop",
@@ -22,6 +24,7 @@ public class SubmitClaimServiceTests
         PayToNumber = "01700000000",
         AccountType = WalletAccountType.PersonalRetail,
         Status = status,
+        Mode = mode,
         ExpiresAt = Now.AddMinutes(10),
         GraceUntil = graceUntil ?? Now.AddMinutes(25),
     };

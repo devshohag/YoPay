@@ -31,7 +31,13 @@ final class Client
      * already exists rather than making a second one, which is what makes a retrying
      * checkout button harmless.
      *
-     * @param array<string, mixed> $extra optional: customerName, customerMsisdn,
+     * Pass ['mode' => 'UniqueAmount'] in $extra for the zero-input flow: the customer is
+     * shown one exact figure and told to send it, and types nothing. YoPay cannot always
+     * grant it - if every figure near this price is already reserved by another open
+     * invoice on the same wallet, the invoice comes back on the transaction-id flow
+     * instead. Read $invoice['mode'] rather than assuming you got what you asked for.
+     *
+     * @param array<string, mixed> $extra optional: mode, customerName, customerMsisdn,
      *                                    redirectUrl, metadataJson, walletId
      * @return array<string, mixed>
      */

@@ -63,6 +63,11 @@ public class DashboardModel(
     [BindProperty]
     public string? OrderRef { get; set; }
 
+    /// <summary>Ticked means the zero-input flow: no transaction id box on the checkout
+    /// page, the exact figure is the identifier.</summary>
+    [BindProperty]
+    public bool ZeroInput { get; set; }
+
     /// <summary>True while the worker still has something to do, which is what the page
     /// uses to decide whether refreshing itself is worth the noise.</summary>
     public bool Working { get; private set; }
@@ -90,7 +95,8 @@ public class DashboardModel(
                 Amount = Amount,
                 Method = PaymentMethod.Bkash,
             },
-            ct: ct).ConfigureAwait(false);
+            ZeroInput ? MatchingMode.UniqueAmount : MatchingMode.TrxId,
+            ct).ConfigureAwait(false);
 
         if (result.Invoice is { } invoice)
         {
@@ -99,7 +105,11 @@ public class DashboardModel(
                 ?? "http://localhost:5082";
 
             CheckoutUrl = $"{baseUrl}/pay/{invoice.Id}";
-            Notice = $"{result.Outcome}: {orderRef} for {invoice.ChargedAmount:N2}";
+
+            // The mode is said out loud because it is not always the one that was asked
+            // for: UniqueAmount falls back to TrxId when no distinct figure is left on
+            // the wallet, and a silent fallback would look like the feature not working.
+            Notice = $"{result.Outcome}: {orderRef} for {invoice.ChargedAmount:N2} ({invoice.Mode})";
         }
         else
         {
@@ -442,7 +452,7 @@ public class DashboardModel(
             .Take(15)
             .Select(i => new InvoiceRow(
                 i.Id, i.OrderRef, i.Amount, i.ChargedAmount, i.Status, i.CreatedAt, i.PaidAt,
-                i.GraceUntil))
+                i.GraceUntil, i.Mode))
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
@@ -495,7 +505,7 @@ public class DashboardModel(
     public sealed record InvoiceRow(
         Guid Id, string OrderRef, decimal Amount, decimal ChargedAmount,
         InvoiceStatus Status, DateTimeOffset CreatedAt, DateTimeOffset? PaidAt,
-        DateTimeOffset GraceUntil)
+        DateTimeOffset GraceUntil, MatchingMode Mode)
     {
         /// <summary>
         /// A payment that arrives after this is refused by the matcher, and until the

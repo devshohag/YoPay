@@ -40,7 +40,7 @@ Calling this again with the same `OrderRef` returns the invoice you already have
 than making a second one — a double-clicked checkout button is harmless and you do not
 need a lock around it.
 
-**Show `ChargedAmount`, never `Amount`.** YoPay may adjust the figure by a few poisha so
+**Show `ChargedAmount`, never `Amount`.** YoPay may add a taka or two, never subtract, so
 the incoming amount is unambiguous on that wallet, and `ChargedAmount` is what the
 customer must actually send.
 

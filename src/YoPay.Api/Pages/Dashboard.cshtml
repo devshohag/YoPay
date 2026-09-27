@@ -99,6 +99,10 @@
             @Html.AntiForgeryToken()
             <input name="Amount" value="@Model.Amount" style="width:110px" placeholder="Amount" />
             <input name="OrderRef" value="" style="width:200px" placeholder="Order ref (optional)" />
+            <label style="font-size:13px;margin:0 6px">
+                <input type="checkbox" name="ZeroInput" value="true" style="width:auto" />
+                no TrxID
+            </label>
             <button type="submit">Create</button>
         </form>
         <form method="post" asp-page-handler="PairingCode" style="margin-left:8px">
@@ -124,13 +128,14 @@
     <div class="card">
         <h2>Invoices</h2>
         <table>
-            <tr><th>Order</th><th>Billed</th><th>Charged</th><th>Status</th><th>Created</th><th>Window</th><th>Actions</th></tr>
+            <tr><th>Order</th><th>Billed</th><th>Charged</th><th>Flow</th><th>Status</th><th>Created</th><th>Window</th><th>Actions</th></tr>
             @foreach (var i in Model.Invoices)
             {
                 <tr>
                     <td>@i.OrderRef</td>
                     <td>@i.Amount.ToString("N2")</td>
                     <td>@i.ChargedAmount.ToString("N2")</td>
+                    <td class="muted">@(i.Mode == MatchingMode.UniqueAmount ? "no TrxID" : "TrxID")</td>
                     <td><span class="pill @i.Status">@i.Status</span></td>
                     <td class="muted">@i.CreatedAt.ToLocalTime().ToString("HH:mm:ss")</td>
                     <td class="@(i.WindowClosed ? "closed" : "muted")">
@@ -158,7 +163,7 @@
             }
             @if (Model.Invoices.Count == 0)
             {
-                <tr><td colspan="7" class="muted">none yet</td></tr>
+                <tr><td colspan="8" class="muted">none yet</td></tr>
             }
         </table>
     </div>

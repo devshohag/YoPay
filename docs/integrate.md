@@ -73,7 +73,7 @@ var invoice = await yopay.CreateInvoiceAsync(new CreateInvoiceRequest
 return Redirect(invoice.CheckoutUrl!);
 ```
 
-Show **`ChargedAmount`**, never `Amount`. YoPay may move the figure by a few poisha so the
+Show **`ChargedAmount`**, never `Amount`. YoPay may add a taka or two, never subtract, so the
 incoming amount is unambiguous on that wallet; `ChargedAmount` is what the customer must
 send, and anything else will not match.
 

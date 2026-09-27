@@ -22,6 +22,10 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(x => x.CallbackUrl).HasMaxLength(2000);
         builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
 
+        // The matcher's amount lookup filters on this, so it is worth an index next to
+        // the state it is always queried beside.
+        builder.HasIndex(x => new { x.WalletId, x.Mode, x.Status });
+
         // A retried create must not produce a second invoice for the same order.
         builder.HasIndex(x => new { x.MerchantId, x.OrderRef }).IsUnique();
         builder.HasIndex(x => new { x.Status, x.GraceUntil });

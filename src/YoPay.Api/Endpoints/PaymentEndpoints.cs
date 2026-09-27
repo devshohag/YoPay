@@ -50,7 +50,8 @@ public static class PaymentEndpoints
                     CallbackUrl = request.CallbackUrl,
                     MetadataJson = request.MetadataJson,
                 },
-                ct: ct).ConfigureAwait(false);
+                request.Mode ?? MatchingMode.TrxId,
+                ct).ConfigureAwait(false);
 
             if (!result.Succeeded)
             {
@@ -76,6 +77,11 @@ public static class PaymentEndpoints
                 Status = invoice.Status,
                 ExpiresAt = invoice.ExpiresAt,
                 CheckoutUrl = $"{checkoutBaseUrl}/pay/{invoice.Id}",
+
+                // What the invoice actually got, which is not always what was asked for:
+                // UniqueAmount falls back to TrxId when no distinct figure is left on the
+                // wallet. Saying so here is the only way a caller can know.
+                Mode = invoice.Mode,
             };
 
             return result.Outcome == CreateInvoiceOutcome.Created
@@ -119,6 +125,7 @@ public static class PaymentEndpoints
                 Status = invoice.Status,
                 ExpiresAt = invoice.ExpiresAt,
                 CheckoutUrl = $"{checkoutBaseUrl}/pay/{invoice.Id}",
+                Mode = invoice.Mode,
             });
         });
 
@@ -164,6 +171,7 @@ public static class PaymentEndpoints
                 Currency = invoice.Currency,
                 Status = invoice.Status,
                 ExpiresAt = invoice.ExpiresAt,
+                Mode = invoice.Mode,
             });
         });
 

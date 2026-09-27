@@ -28,15 +28,15 @@ public class SdkVectorTests
 
     private sealed record VectorFile(string Secret, IReadOnlyList<Vector> Cases);
 
+    private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
+
     private static readonly VectorFile File_ = Load();
 
     private static VectorFile Load()
     {
         var json = File.ReadAllText(Path.Combine("fixtures", "vectors.json"));
 
-        return JsonSerializer.Deserialize<VectorFile>(
-            json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        return JsonSerializer.Deserialize<VectorFile>(json, Json)!;
     }
 
     public static TheoryData<int> RequestCases() => Indexes("request");

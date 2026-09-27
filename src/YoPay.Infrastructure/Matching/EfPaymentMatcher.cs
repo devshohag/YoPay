@@ -132,6 +132,16 @@ public sealed class EfPaymentMatcher(YoPayDbContext db) : IPaymentMatcher
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
+    /// <summary>
+    /// Open sessions on this wallet expecting exactly this amount - and only for invoices
+    /// that asked to be matched that way.
+    ///
+    /// The mode filter is the difference between the two flows meaning something and
+    /// meaning nothing. An invoice on TrxId was put there precisely so that only a
+    /// payment whose id the customer pasted can settle it; letting a stray payment of the
+    /// right amount settle it anyway would hand back exactly the risk the merchant chose
+    /// to avoid, and quietly.
+    /// </summary>
     private async Task<IReadOnlyList<MatchCandidate>> FindByAmountAsync(
         IncomingPayment payment, CancellationToken ct) =>
         await (from session in db.PaymentSessions
@@ -139,6 +149,7 @@ public sealed class EfPaymentMatcher(YoPayDbContext db) : IPaymentMatcher
                where session.WalletId == payment.WalletId
                      && session.State == SessionState.Open
                      && session.ExpectedAmount == payment.Amount
+                     && invoice.Mode == MatchingMode.UniqueAmount
                select new MatchCandidate
                {
                    SessionId = session.Id,

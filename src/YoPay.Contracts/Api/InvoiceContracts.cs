@@ -15,6 +15,17 @@ public sealed record CreateInvoiceRequest
     public string? RedirectUrl { get; init; }
     public string? CallbackUrl { get; init; }
     public string? MetadataJson { get; init; }
+
+    /// <summary>
+    /// Leave it unset for the transaction-id flow, which is the default.
+    ///
+    /// UniqueAmount is the zero-input experience: the customer is shown one exact figure
+    /// and told to send it, and nothing is typed. YoPay may not be able to grant it - if
+    /// every figure near this price is already reserved by another open invoice on the
+    /// same wallet, the answer comes back on TrxId instead, and the response says so.
+    /// Read Mode on the response rather than assuming you got what you asked for.
+    /// </summary>
+    public MatchingMode? Mode { get; init; }
 }
 
 public sealed record InvoiceResponse
@@ -30,6 +41,9 @@ public sealed record InvoiceResponse
     public required InvoiceStatus Status { get; init; }
     public required DateTimeOffset ExpiresAt { get; init; }
     public string? CheckoutUrl { get; init; }
+
+    /// <summary>Which flow the customer will actually see. Not always what was asked for.</summary>
+    public MatchingMode Mode { get; init; }
 }
 
 /// <summary>

@@ -24,6 +24,16 @@ public sealed record CheckoutView
     public required string PayToNumber { get; init; }
     public required WalletAccountType AccountType { get; init; }
     public required InvoiceStatus Status { get; init; }
+
+    /// <summary>
+    /// Whether this page asks the customer for a transaction id at all.
+    ///
+    /// On the page rather than inferred from anything visible: an invoice on the
+    /// UniqueAmount flow looks identical to one on the TrxId flow except for the box, and
+    /// guessing from, say, whether the charged amount differs from the billed one would
+    /// be wrong every time the base figure happened to be free.
+    /// </summary>
+    public required MatchingMode Mode { get; init; }
     public required DateTimeOffset ExpiresAt { get; init; }
     public required DateTimeOffset GraceUntil { get; init; }
     public string? RedirectUrl { get; init; }

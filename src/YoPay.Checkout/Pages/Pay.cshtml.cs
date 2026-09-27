@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using YoPay.Application.Invoicing;
+using YoPay.Domain.Enums;
 
 namespace YoPay.Checkout.Pages;
 
@@ -28,6 +29,14 @@ public class PayModel(IInvoiceStore invoices, SubmitClaimService claims) : PageM
         if (Invoice is null)
         {
             return NotFound();
+        }
+
+        // The form is not rendered on the zero-input flow, but a POST can still be
+        // crafted by hand. Accepting it would write a claim nothing will ever look at,
+        // and leave the customer believing they had told us something.
+        if (Invoice.Mode == MatchingMode.UniqueAmount)
+        {
+            return RedirectToPage(new { invoiceId });
         }
 
         var result = await claims

@@ -28,6 +28,8 @@
         .row span:first-child { color:var(--muted); }
         ol { margin:10px 0 0; padding-left:20px; font-size:14px; }
         li { margin-bottom:6px; }
+        .waiting { text-align:center; padding:14px; color:#475569; font-size:15px; }
+        .waiting::after { content:''; display:inline-block; width:14px; }
         input { width:100%; padding:12px; font-size:16px; border:1px solid var(--line);
                 border-radius:8px; text-transform:uppercase; }
         button { width:100%; padding:13px; font-size:16px; font-weight:600; color:#fff;
@@ -77,26 +79,48 @@
             <div class="row"><span>ধরন / Type</span><span>Send Money</span></div>
         </div>
 
-        <ol>
-            <li>@methodName অ্যাপে <strong>Send Money</strong> দিন</li>
-            <li>উপরের নম্বরে ঠিক <strong>৳@invoice.ChargedAmount.ToString("N2")</strong> পাঠান</li>
-            <li>SMS-এ আসা <strong>TrxID</strong> নিচে লিখুন</li>
-        </ol>
-
-        @if (Model.Message is not null)
+        @* Two flows, and the difference is the whole customer experience.
+           UniqueAmount asks for nothing: the exact figure is the identifier, so the page
+           only has to be honest about the amount and then wait. *@
+        @if (invoice.Mode == MatchingMode.UniqueAmount)
         {
-            <div class="msg @(Model.IsError ? "bad" : "ok")">@Model.Message</div>
+            <ol>
+                <li>@methodName অ্যাপে <strong>Send Money</strong> দিন</li>
+                <li>উপরের নম্বরে <strong>ঠিক ৳@invoice.ChargedAmount.ToString("N2")</strong> পাঠান &mdash;
+                    পয়সাসহ, হুবহু এই অঙ্কটাই</li>
+                <li>ব্যস। টাকা পৌঁছালে এই পেজ নিজেই আপডেট হবে</li>
+            </ol>
+
+            @if (Model.Message is not null)
+            {
+                <div class="msg @(Model.IsError ? "bad" : "ok")">@Model.Message</div>
+            }
+
+            <div class="waiting" id="waiting">টাকার জন্য অপেক্ষা করছি&hellip;</div>
         }
-
-        @if (!Model.Submitted)
+        else
         {
-            <form method="post">
-                @Html.AntiForgeryToken()
-                <input name="TrxId" value="@Model.TrxId" placeholder="TrxID, যেমন DHD6EYO3HO"
-                       autocomplete="off" autocapitalize="characters" spellcheck="false"
-                       inputmode="latin" maxlength="500" required />
-                <button type="submit">পেমেন্ট নিশ্চিত করুন / Confirm</button>
-            </form>
+            <ol>
+                <li>@methodName অ্যাপে <strong>Send Money</strong> দিন</li>
+                <li>উপরের নম্বরে ঠিক <strong>৳@invoice.ChargedAmount.ToString("N2")</strong> পাঠান</li>
+                <li>SMS-এ আসা <strong>TrxID</strong> নিচে লিখুন</li>
+            </ol>
+
+            @if (Model.Message is not null)
+            {
+                <div class="msg @(Model.IsError ? "bad" : "ok")">@Model.Message</div>
+            }
+
+            @if (!Model.Submitted)
+            {
+                <form method="post">
+                    @Html.AntiForgeryToken()
+                    <input name="TrxId" value="@Model.TrxId" placeholder="TrxID, যেমন DHD6EYO3HO"
+                           autocomplete="off" autocapitalize="characters" spellcheck="false"
+                           inputmode="latin" maxlength="500" required />
+                    <button type="submit">পেমেন্ট নিশ্চিত করুন / Confirm</button>
+                </form>
+            }
         }
 
         <div class="timer" id="timer" data-expires="@invoice.ExpiresAt.ToUnixTimeSeconds()"></div>
@@ -118,7 +142,9 @@
                 var m = Math.floor(left / 60), s = left % 60;
                 el.textContent = left > 0
                     ? 'বাকি সময় ' + m + ':' + (s < 10 ? '0' : '') + s
-                    : 'সময় শেষ — টাকা পাঠিয়ে থাকলে TrxID দিন';
+                    : (document.getElementById('waiting')
+                        ? 'সময় শেষ — টাকা পাঠিয়ে থাকলে একটু অপেক্ষা করুন'
+                        : 'সময় শেষ — টাকা পাঠিয়ে থাকলে TrxID দিন');
             }, 1000);
         }
 
