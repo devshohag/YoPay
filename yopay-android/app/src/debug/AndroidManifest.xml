@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug builds only. Merged into the debug variant and into nothing else.
+
+    Android blocks cleartext HTTP by default from API 28 onwards, and during the phone
+    trial the server is a laptop on the same wifi at http://192.168.x.x:5081 with no
+    certificate. Without this the app cannot reach it, and the failure arrives as a bare
+    network error that sends you looking at the firewall, the port and the IP address -
+    none of which are the problem.
+
+    It lives here rather than in the main manifest on purpose. A release build must never
+    carry it: a payment app that accepts cleartext on a merchant's phone is one hostile
+    wifi away from someone editing a payment in flight.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:usesCleartextTraffic="true"
+        tools:targetApi="28" />
+
+</manifest>
