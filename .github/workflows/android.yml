@@ -1,8 +1,8 @@
 # Builds the device app and leaves the APK attached to the run.
 #
 # It exists because an Android SDK is a large thing to keep on a laptop for an app that
-# changes a few times a month, and because a build that happens on a runner is the same
-# build every time - no "works on my machine" between the phone trial and whatever ships.
+# changes a few times a month, and because a build on a runner is the same build every
+# time - no "works on my machine" between the phone trial and whatever ships.
 #
 # Run it from the Actions tab (Run workflow), or by pushing a change under yopay-android.
 # The APK lands under Artifacts on the run's page.
@@ -28,20 +28,32 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # Command line tools and the licence acceptance. The Android plugin fetches the
-      # platform and build tools it needs on its own once these are in place.
-      - uses: android-actions/setup-android@v3
+      # No setup-android action. The GitHub runner image already carries an Android SDK
+      # with its licences accepted, and an earlier version of this file failed inside
+      # that action before ever reaching a build - one dependency to install a thing that
+      # was already installed. If a component really is missing, the Android plugin
+      # fetches it, which is what the two properties below permit.
+      - name: Show what the runner already has
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          ls "$ANDROID_HOME/platforms" 2>/dev/null || echo "no platforms directory"
+          ls "$ANDROID_HOME/build-tools" 2>/dev/null || echo "no build-tools directory"
+          ls "$ANDROID_HOME/licenses" 2>/dev/null || echo "no licences directory"
 
       # The repository has no Gradle wrapper, so the action supplies Gradle itself.
-      # Pinned rather than "latest": a build that silently changes toolchain between two
-      # runs is a build whose output nobody can compare.
+      # Pinned rather than "latest": a build whose toolchain changes silently between two
+      # runs is a build nobody can compare.
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
       - name: Build the debug APK
         working-directory: yopay-android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          gradle assembleDebug --no-daemon --stacktrace \
+            -Pandroid.builder.sdkDownload=true \
+            -Pandroid.suppressUnsupportedCompileSdk=35
 
       # Debug signing, which is what a sideloaded trial build needs. A release build has
       # to be signed with a key that is not in this repository, and that is a separate
