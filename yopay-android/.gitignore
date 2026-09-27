@@ -1,0 +1,10 @@
+# Gradle and Android build output. None of it belongs in the repository, and the build
+# directory alone can reach a few hundred megabytes.
+build/
+.gradle/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/

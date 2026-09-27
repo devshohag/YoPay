@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">YoPay Device</string>
+    <string name="grant_access">Grant notification access</string>
+    <string name="pairing">Pair this phone</string>
+    <string name="server_hint">Server address</string>
+    <string name="code_hint">Pairing code</string>
+    <string name="pair">Pair</string>
+</resources>
